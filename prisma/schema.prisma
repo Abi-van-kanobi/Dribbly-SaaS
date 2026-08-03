@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Manager {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+enum CreatorStatus {
+  ACTIVE
+  IDLE
+}
+
+model Creator {
+  id           String        @id @default(cuid())
+  name         String
+  handle       String
+  category     String
+  instagram    Int? // followers
+  youtube      Int? // followers
+  status       CreatorStatus @default(ACTIVE)
+  ratecardNote String?
+  createdAt    DateTime      @default(now())
+
+  campaigns Campaign[]
+  invoices  Invoice[]
+  tasks     Task[]
+  contacts  Contact[]
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  campaigns Campaign[]
+  invoices  Invoice[]
+  notes     Note[]
+  contacts  Contact[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  LIVE
+  IN_REVIEW
+  WRAPPING
+  COMPLETED
+}
+
+model Campaign {
+  id        String         @id @default(cuid())
+  name      String
+  status    CampaignStatus @default(DRAFT)
+  value     Int // in rupees
+  deadline  DateTime
+  createdAt DateTime       @default(now())
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id])
+
+  creatorId String
+  creator   Creator @relation(fields: [creatorId], references: [id])
+
+  deliverables Deliverable[]
+  invoices     Invoice[]
+  tasks        Task[]
+  notes        Note[]
+}
+
+enum DeliverableStage {
+  PLANNED
+  IN_PROGRESS
+  IN_REVIEW
+  APPROVED
+  LIVE
+}
+
+model Deliverable {
+  id                 String           @id @default(cuid())
+  title              String
+  stage              DeliverableStage @default(PLANNED)
+  dueDate            DateTime
+  isPaymentMilestone Boolean          @default(false)
+  order              Int              @default(0)
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+enum PayRail {
+  RAZORPAY
+  STRIPE
+  WISE
+  PAYPAL
+}
+
+enum InvoiceStatus {
+  PENDING
+  OVERDUE
+  PAID
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  number    String
+  amount    Int // in rupees
+  rail      PayRail
+  status    InvoiceStatus @default(PENDING)
+  dueDate   DateTime
+  createdAt DateTime      @default(now())
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id])
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id])
+
+  creatorId String
+  creator   Creator @relation(fields: [creatorId], references: [id])
+}
+
+model Task {
+  id      String    @id @default(cuid())
+  title   String
+  dueAt   DateTime?
+  done    Boolean   @default(false)
+  tag     String?
+  order   Int       @default(0)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id])
+}
+
+enum NoteKind {
+  BRIEF
+  INTERNAL
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  kind      NoteKind @default(INTERNAL)
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+}
+
+enum ContactType {
+  BRAND
+  AGENCY
+  CREATOR
+}
+
+model Contact {
+  id    String      @id @default(cuid())
+  name  String
+  role  String?
+  org   String?
+  email String?
+  phone String?
+  type  ContactType
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id])
+}

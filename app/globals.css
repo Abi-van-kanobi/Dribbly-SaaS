@@ -1,0 +1,386 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════════
+   Aurora — the one design system for the whole app (marketing site,
+   Insights, login, and the authenticated workspace).
+   ══════════════════════════════════════════════════════════════════════ */
+:root {
+  --aurora-bg: #ffffff;
+  --aurora-bg-tint: #f8f7fc;
+  --aurora-text: #14121f;
+  --aurora-text-muted: #6b7280;
+  --aurora-border: #e7e3f0;
+  --aurora-accent: #7c3aed;
+
+  --aurora-gradient-primary: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #f97316 100%);
+  --aurora-gradient-soft: linear-gradient(135deg, #ede9fe 0%, #fce7f3 100%);
+  --aurora-gradient-button: linear-gradient(90deg, #7c3aed 0%, #db2777 100%);
+
+  --aurora-radius-sm: 8px;
+  --aurora-radius-md: 12px;
+  --aurora-radius-lg: 20px;
+
+  --aurora-shadow-sm: 0 1px 2px rgba(20, 18, 31, 0.05);
+  --aurora-shadow-md: 0 8px 24px rgba(20, 18, 31, 0.08);
+  --aurora-shadow-lg: 0 24px 64px rgba(124, 58, 237, 0.14);
+}
+
+@theme inline {
+  --color-bg: var(--aurora-bg);
+  --color-text: var(--aurora-text);
+  --color-accent: var(--aurora-accent);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--aurora-bg);
+  color: var(--aurora-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 400;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+a {
+  color: var(--aurora-accent);
+  text-underline-offset: 3px;
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--aurora-accent);
+  outline-offset: 2px;
+}
+::selection {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4cfe3;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mkt {
+  color: var(--aurora-text);
+  background: var(--aurora-bg);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+.mkt-tint {
+  background: var(--aurora-bg-tint);
+}
+
+.mkt-gradient-text {
+  background: var(--aurora-gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.mkt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 12px 24px;
+  border-radius: var(--aurora-radius-md);
+  cursor: pointer;
+  text-decoration: none;
+  border: 1.5px solid transparent;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.mkt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mkt-btn-primary {
+  background: var(--aurora-gradient-button);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(219, 39, 119, 0.25);
+}
+.mkt-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(219, 39, 119, 0.34);
+}
+.mkt-btn-ghost {
+  background: transparent;
+  color: var(--aurora-text);
+  border-color: var(--aurora-border);
+}
+.mkt-btn-ghost:hover {
+  background: var(--aurora-bg-tint);
+}
+.mkt-btn-white {
+  background: #fff;
+  color: var(--aurora-accent);
+}
+.mkt-btn-white:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+.mkt-btn:focus-visible {
+  outline: 2px solid var(--aurora-accent);
+  outline-offset: 2px;
+}
+
+.mkt-card {
+  background: var(--aurora-bg);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius-lg);
+  box-shadow: var(--aurora-shadow-sm);
+}
+
+.mkt-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14.5px;
+  color: var(--aurora-text);
+  background: #fff;
+  border: 1.5px solid var(--aurora-border);
+  border-radius: var(--aurora-radius-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.mkt-field > label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--aurora-text);
+}
+.mkt-input::placeholder {
+  color: #a8a3b8;
+}
+.mkt-input:hover {
+  border-color: #cfc9e0;
+}
+.mkt-input:focus-visible {
+  outline: none;
+  border-color: var(--aurora-accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+textarea.mkt-input {
+  min-height: 90px;
+  resize: vertical;
+}
+select.mkt-input {
+  appearance: none;
+}
+
+.mkt-link {
+  color: var(--aurora-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.mkt-link:hover {
+  text-decoration: underline;
+}
+
+.mkt-underline-hover {
+  position: relative;
+  text-decoration: none;
+  color: var(--aurora-text-muted);
+  width: fit-content;
+}
+.mkt-underline-hover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: -3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--aurora-gradient-primary);
+  transition: right 0.2s ease;
+}
+.mkt-underline-hover:hover {
+  color: var(--aurora-text);
+}
+.mkt-underline-hover:hover::after {
+  right: 0;
+}
+
+.mkt-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.mkt-tag-accent {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+.mkt-tag-neutral {
+  background: #f1f0f5;
+  color: #4b5563;
+}
+.mkt-tag-outline {
+  background: transparent;
+  border: 1px solid var(--aurora-accent);
+  color: var(--aurora-accent);
+}
+.mkt-tag-good {
+  background: #dcfce7;
+  color: #15803d;
+}
+.mkt-tag-warn {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.mkt-tag-bad {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.mkt-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--aurora-radius-sm);
+  border: 1px solid var(--aurora-border);
+  background: #fff;
+  color: var(--aurora-text-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mkt-btn-icon:hover {
+  background: var(--aurora-bg-tint);
+  color: var(--aurora-text);
+}
+
+.mkt-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #d4cfe3;
+  flex: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: #fff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.mkt-checkbox-checked {
+  background: var(--aurora-gradient-button);
+  border-color: transparent;
+}
+
+.mkt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.mkt-table th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--aurora-text-muted);
+  padding: 12px;
+  border-bottom: 1px solid var(--aurora-border);
+}
+.mkt-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--aurora-border);
+  color: var(--aurora-text);
+}
+.mkt-table tbody tr:hover {
+  background: var(--aurora-bg-tint);
+}
+
+.mkt-progress {
+  height: 7px;
+  border-radius: 5px;
+  background: var(--aurora-bg-tint);
+  overflow: hidden;
+}
+.mkt-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--aurora-gradient-button);
+}
+
+.mkt-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 18, 31, 0.45);
+  backdrop-filter: blur(2px);
+}
+.mkt-dialog {
+  width: min(480px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  border-radius: var(--aurora-radius-lg);
+  background: #fff;
+  box-shadow: var(--aurora-shadow-lg);
+}
+.mkt-dialog-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--aurora-text);
+}
+
+@keyframes mkt-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.mkt-reveal {
+  opacity: 0;
+}
+.mkt-reveal-visible {
+  animation: mkt-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
