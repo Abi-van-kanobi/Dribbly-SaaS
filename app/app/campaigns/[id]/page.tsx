@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import { campaignStatus, deliverableStage, invoiceStatus, payRail, isDeliverableDone } from "@/lib/labels";
-import { formatINR, formatShortDate } from "@/lib/format";
+import { formatMoney, formatShortDate } from "@/lib/format";
 import { AddDeliverableDialog } from "@/components/AddDeliverableDialog";
 import { AdvanceStageButton } from "@/components/AdvanceStageButton";
 import { Flag } from "@phosphor-icons/react/dist/ssr";
+import { AlignerDropZone, type UploadState } from "@/components/aligner/AlignerDropZone";
+import { AlignerItemRow } from "@/components/aligner/AlignerItemRow";
+import { isStorageConfigured } from "@/lib/storage";
+import { PinButton } from "@/components/today/PinButton";
+import { AssignCreatorDialog } from "@/components/AssignCreatorDialog";
+import { CreatorChip } from "@/components/CreatorChip";
+import { pinnedKeys } from "@/lib/pin-service";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -13,6 +20,7 @@ const TABS = [
   { key: "deliverables", label: "Deliverables" },
   { key: "payments", label: "Payments" },
   { key: "notes", label: "Notes" },
+  { key: "aligner", label: "Aligner" },
 ] as const;
 
 export default async function CampaignDetailPage({
@@ -24,8 +32,11 @@ export default async function CampaignDetailPage({
 }) {
   const { id } = await params;
   const { tab = "overview" } = await searchParams;
+  const { db, workspace, user } = await requireWorkspace();
+  const money = (n: number) => formatMoney(n, workspace.currency);
+  const pinned = await pinnedKeys(db, { workspaceId: workspace.id, userId: user.id, timeZone: workspace.timezone, now: new Date() });
 
-  const campaign = await prisma.campaign.findUnique({
+  const campaign = await db.campaign.findUnique({
     where: { id },
     include: {
       brand: true,
@@ -33,10 +44,16 @@ export default async function CampaignDetailPage({
       deliverables: { orderBy: { order: "asc" } },
       invoices: { orderBy: { dueDate: "asc" } },
       notes: { orderBy: { createdAt: "desc" } },
+      alignerItems: { orderBy: { createdAt: "desc" } },
     },
   });
 
   if (!campaign) notFound();
+
+  const allCreators = await db.creator.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } });
+
+  const allCampaigns = tab === "aligner" ? await db.campaign.findMany({ select: { id: true, name: true }, orderBy: { createdAt: "desc" } }) : [];
+  const uploadState: UploadState = workspace.isDemo ? "demo" : isStorageConfigured() ? "ready" : "off";
 
   const total = campaign.deliverables.length;
   const done = campaign.deliverables.filter((d) => isDeliverableDone(d.stage)).length;
@@ -98,9 +115,12 @@ export default async function CampaignDetailPage({
               <dt style={{ color: "var(--aurora-text-muted)" }}>Brand</dt>
               <dd className="m-0">{campaign.brand.name}</dd>
               <dt style={{ color: "var(--aurora-text-muted)" }}>Creator</dt>
-              <dd className="m-0">{campaign.creator.name}</dd>
+              <dd className="m-0 flex items-center gap-2 flex-wrap">
+                <CreatorChip creator={campaign.creator} />
+                <AssignCreatorDialog campaignId={campaign.id} creators={allCreators} currentId={campaign.creatorId} />
+              </dd>
               <dt style={{ color: "var(--aurora-text-muted)" }}>Value</dt>
-              <dd className="m-0">{formatINR(campaign.value)}</dd>
+              <dd className="m-0">{money(campaign.value)}</dd>
               <dt style={{ color: "var(--aurora-text-muted)" }}>Deadline</dt>
               <dd className="m-0">{formatShortDate(campaign.deadline)}</dd>
               <dt style={{ color: "var(--aurora-text-muted)" }}>Deliverables</dt>
@@ -120,7 +140,7 @@ export default async function CampaignDetailPage({
               {campaign.invoices.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between text-sm">
                   <span>
-                    #{inv.number} · {formatINR(inv.amount)}
+                    #{inv.number} · {money(inv.amount)}
                   </span>
                   <span className={`mkt-tag ${invoiceStatus[inv.status].tag}`}>{invoiceStatus[inv.status].label}</span>
                 </div>
@@ -217,7 +237,10 @@ export default async function CampaignDetailPage({
                       )}
                     </td>
                     <td>
-                      <AdvanceStageButton deliverableId={d.id} isFinal={d.stage === "LIVE"} />
+                      <div className="flex items-center gap-1.5">
+                        <PinButton kind="DELIVERABLE" id={d.id} title={d.title} pinned={pinned.has(`DELIVERABLE:${d.id}`)} />
+                        <AdvanceStageButton deliverableId={d.id} isFinal={d.stage === "LIVE"} />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -244,23 +267,25 @@ export default async function CampaignDetailPage({
                 <th>Rail</th>
                 <th>Status</th>
                 <th>Due</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {campaign.invoices.map((inv) => (
                 <tr key={inv.id}>
                   <td>#{inv.number}</td>
-                  <td>{formatINR(inv.amount)}</td>
+                  <td>{money(inv.amount)}</td>
                   <td>{payRail[inv.rail]}</td>
                   <td>
                     <span className={`mkt-tag ${invoiceStatus[inv.status].tag}`}>{invoiceStatus[inv.status].label}</span>
                   </td>
                   <td>{formatShortDate(inv.dueDate)}</td>
+                  <td>{inv.status !== "PAID" && <PinButton kind="INVOICE" id={inv.id} title={`Invoice #${inv.number}`} pinned={pinned.has(`INVOICE:${inv.id}`)} />}</td>
                 </tr>
               ))}
               {campaign.invoices.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "var(--aurora-text-muted)", padding: 24 }}>
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--aurora-text-muted)", padding: 24 }}>
                     No invoices linked to this campaign yet.{" "}
                     <Link href="/app/payments" className="mkt-link">
                       Add one from Payments →
@@ -296,6 +321,36 @@ export default async function CampaignDetailPage({
               </Link>
             </p>
           )}
+        </div>
+      )}
+      {tab === "aligner" && (
+        <div className="flex flex-col gap-4 max-w-[720px]">
+          <AlignerDropZone uploadState={uploadState} campaignId={campaign.id} compact />
+          <div className="flex flex-col gap-2">
+            {campaign.alignerItems.map((item) => (
+              <AlignerItemRow
+                key={item.id}
+                item={{
+                  id: item.id,
+                  kind: item.kind,
+                  title: item.title,
+                  url: item.url,
+                  text: item.text,
+                  fileName: item.fileName,
+                  mimeType: item.mimeType,
+                  sizeBytes: item.sizeBytes,
+                  createdAt: item.createdAt.toISOString(),
+                  campaignId: item.campaignId,
+                }}
+                campaigns={allCampaigns}
+              />
+            ))}
+            {campaign.alignerItems.length === 0 && (
+              <p className="text-sm m-0" style={{ color: "var(--aurora-text-muted)" }}>
+                Nothing filed to this campaign yet. Drop files, screenshots or links above and they land here.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

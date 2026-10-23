@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import { campaignStatus, creatorStatus, isDeliverableDone } from "@/lib/labels";
-import { formatFollowers, formatINR, formatShortDate } from "@/lib/format";
+import { formatFollowers, formatMoney, formatShortDate } from "@/lib/format";
 import { NewCreatorDialog } from "@/components/NewCreatorDialog";
 import { InstagramLogo, YoutubeLogo } from "@phosphor-icons/react/dist/ssr";
 
@@ -11,8 +11,10 @@ export default async function CreatorsPage({
   searchParams: Promise<{ selected?: string }>;
 }) {
   const params = await searchParams;
+  const { db, workspace } = await requireWorkspace();
+  const money = (n: number) => formatMoney(n, workspace.currency);
 
-  const creators = await prisma.creator.findMany({
+  const creators = await db.creator.findMany({
     orderBy: { name: "asc" },
     include: {
       campaigns: { include: { brand: true, deliverables: true } },
@@ -84,7 +86,7 @@ export default async function CreatorsPage({
                   <span className={`mkt-tag ${status.tag}`}>{activeCampaigns.length > 0 ? `${activeCampaigns.length} live` : status.label}</span>
                 </div>
                 <div className="flex gap-4 mt-3 text-[12.5px]" style={{ color: "var(--aurora-text-muted)" }}>
-                  <span>{pending > 0 ? `${formatINR(pending)} pending` : "—"}</span>
+                  <span>{pending > 0 ? `${money(pending)} pending` : "—"}</span>
                   <span>
                     {upcoming
                       ? `Next: ${upcoming.title} · ${formatShortDate(upcoming.dueDate)}`

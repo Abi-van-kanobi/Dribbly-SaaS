@@ -1,3 +1,8 @@
+// Phase 1: multi-tenant model. Every business record belongs to exactly one Workspace.
+// The datasource is SQLite while Phase 1 is built locally; it switches to PostgreSQL (Neon)
+// in Phase 1B. Nothing below is SQLite-specific, so the switch is a provider change plus a
+// fresh baseline migration.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,12 +12,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Manager {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+// ─── Identity and tenancy ────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  image           String?
+  googleSub       String?   @unique
+  termsAcceptedAt DateTime?
+  termsVersion    String?
+  createdAt       DateTime  @default(now())
+  lastLoginAt     DateTime?
+
+  memberships Membership[]
 }
+
+enum WorkspaceType {
+  MANAGER_AGENCY
+  INDIVIDUAL_CREATOR
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  name      String
+  type      WorkspaceType
+  currency  String        @default("USD") // ISO 4217
+  timezone  String        @default("UTC") // IANA
+  country   String? // ISO 3166-1 alpha-2
+  isDemo    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+
+  memberships  Membership[]
+  creators     Creator[]
+  brands       Brand[]
+  campaigns    Campaign[]
+  deliverables Deliverable[]
+  invoices     Invoice[]
+  tasks        Task[]
+  notes        Note[]
+  contacts     Contact[]
+  alignerItems AlignerItem[]
+  pins         Pin[]
+}
+
+enum MemberRole {
+  OWNER
+  MEMBER
+}
+
+model Membership {
+  id        String     @id @default(cuid())
+  role      MemberRole @default(OWNER)
+  createdAt DateTime   @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+// ─── Business data (all tenant-scoped via workspaceId) ───────────────────
 
 enum CreatorStatus {
   ACTIVE
@@ -28,12 +92,18 @@ model Creator {
   youtube      Int? // followers
   status       CreatorStatus @default(ACTIVE)
   ratecardNote String?
+  isSelf       Boolean       @default(false) // the owner's own profile in an INDIVIDUAL_CREATOR workspace
   createdAt    DateTime      @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   campaigns Campaign[]
   invoices  Invoice[]
   tasks     Task[]
   contacts  Contact[]
+
+  @@index([workspaceId])
 }
 
 model Brand {
@@ -41,10 +111,15 @@ model Brand {
   name      String
   createdAt DateTime @default(now())
 
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   campaigns Campaign[]
   invoices  Invoice[]
   notes     Note[]
   contacts  Contact[]
+
+  @@index([workspaceId])
 }
 
 enum CampaignStatus {
@@ -59,20 +134,27 @@ model Campaign {
   id        String         @id @default(cuid())
   name      String
   status    CampaignStatus @default(DRAFT)
-  value     Int // in rupees
+  value     Int // in rupees (Phase 2 replaces this with amountMinor + currency)
   deadline  DateTime
   createdAt DateTime       @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id])
 
-  creatorId String
-  creator   Creator @relation(fields: [creatorId], references: [id])
+  // Optional: a campaign (and its invoices) can exist before a creator is chosen.
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id])
 
   deliverables Deliverable[]
   invoices     Invoice[]
   tasks        Task[]
   notes        Note[]
+  alignerItems AlignerItem[]
+
+  @@index([workspaceId])
 }
 
 enum DeliverableStage {
@@ -91,8 +173,15 @@ model Deliverable {
   isPaymentMilestone Boolean          @default(false)
   order              Int              @default(0)
 
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  pin Pin?
+
+  @@index([workspaceId])
 }
 
 enum PayRail {
@@ -111,11 +200,14 @@ enum InvoiceStatus {
 model Invoice {
   id        String        @id @default(cuid())
   number    String
-  amount    Int // in rupees
+  amount    Int // in rupees (Phase 2 replaces this with amountMinor + currency)
   rail      PayRail
   status    InvoiceStatus @default(PENDING)
   dueDate   DateTime
   createdAt DateTime      @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   campaignId String
   campaign   Campaign @relation(fields: [campaignId], references: [id])
@@ -123,23 +215,35 @@ model Invoice {
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id])
 
-  creatorId String
-  creator   Creator @relation(fields: [creatorId], references: [id])
+  // Optional: a campaign (and its invoices) can exist before a creator is chosen.
+  creatorId String?
+  creator   Creator? @relation(fields: [creatorId], references: [id])
+
+  pin Pin?
+
+  @@index([workspaceId])
 }
 
 model Task {
-  id      String    @id @default(cuid())
-  title   String
-  dueAt   DateTime?
-  done    Boolean   @default(false)
-  tag     String?
-  order   Int       @default(0)
+  id    String    @id @default(cuid())
+  title String
+  dueAt DateTime?
+  done  Boolean   @default(false)
+  tag   String?
+  order Int       @default(0)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id])
 
   creatorId String?
   creator   Creator? @relation(fields: [creatorId], references: [id])
+
+  pin Pin?
+
+  @@index([workspaceId])
 }
 
 enum NoteKind {
@@ -154,11 +258,16 @@ model Note {
   body      String
   createdAt DateTime @default(now())
 
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   campaignId String?
   campaign   Campaign? @relation(fields: [campaignId], references: [id])
 
   brandId String?
   brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  @@index([workspaceId])
 }
 
 enum ContactType {
@@ -176,9 +285,92 @@ model Contact {
   phone String?
   type  ContactType
 
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   brandId String?
   brand   Brand?  @relation(fields: [brandId], references: [id])
 
   creatorId String?
   creator   Creator? @relation(fields: [creatorId], references: [id])
+
+  @@index([workspaceId])
+}
+
+enum AlignerKind {
+  FILE
+  IMAGE
+  NOTE
+  LINK
+  NOTION
+  GOOGLE_DOC
+  GOOGLE_SHEET
+}
+
+enum AlignerStatus {
+  INBOX
+  FILED
+}
+
+/// One thing a user dropped into the Work Aligner: an uploaded file or screenshot, a pasted
+/// link (Notion, Google Doc or Sheet, any URL) or a typed note. Links are stored, never fetched.
+/// Uploaded bytes live in file storage under fileKey, never in this table.
+model AlignerItem {
+  id        String        @id @default(cuid())
+  kind      AlignerKind
+  status    AlignerStatus @default(INBOX)
+  title     String
+  url       String?
+  text      String?
+  fileKey   String?
+  fileName  String?
+  mimeType  String?
+  sizeBytes Int?
+  addedById String?
+  createdAt DateTime      @default(now())
+  filedAt   DateTime?
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([campaignId])
+}
+
+enum PinKind {
+  TASK
+  DELIVERABLE
+  INVOICE
+}
+
+/// One thing a user put on the Important Today bar. Exactly one of taskId, deliverableId or invoiceId is set,
+/// and each of those can have at most one pin (unpinning deletes the row). Days are workspace-local
+/// calendar days written as "YYYY-MM-DD", so "today" follows the workspace time zone, not the server's.
+model Pin {
+  id         String   @id @default(cuid())
+  kind       PinKind
+  /// The day this pin is for. A pin that is not finished by midnight keeps showing, marked as carried over.
+  showOn     String
+  /// The day it was ticked off. It stays on the bar, struck through, until that day ends.
+  doneOn     String?
+  order      Int      @default(0)
+  pinnedById String?
+  createdAt  DateTime @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taskId String?  @unique
+  task   Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  deliverableId String?      @unique
+  deliverable   Deliverable? @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+
+  invoiceId String?  @unique
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, showOn])
 }

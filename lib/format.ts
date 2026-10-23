@@ -1,12 +1,19 @@
-export function formatINR(amount: number): string {
-  if (amount >= 100000) {
-    const lakhs = amount / 100000;
-    return `₹${lakhs.toFixed(1).replace(/\.0$/, "")}L`;
+/**
+ * Money in the workspace's own currency, short for big numbers ($4,500 then $12.5K).
+ * Amounts are whole units of the currency until Phase 2 moves storage to minor units.
+ */
+export function formatMoney(amount: number, currency: string, locale = "en-US"): string {
+  const compact = Math.abs(amount) >= 10000;
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+      notation: compact ? "compact" : "standard",
+      maximumFractionDigits: compact ? 1 : 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
   }
-  if (amount >= 1000) {
-    return `₹${Math.round(amount / 1000)}k`;
-  }
-  return `₹${amount}`;
 }
 
 export function formatFollowers(count: number): string {

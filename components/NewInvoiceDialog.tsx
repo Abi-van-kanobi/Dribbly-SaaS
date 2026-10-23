@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { Modal } from "@/components/Modal";
+import { useOpenFromNew } from "@/components/useOpenFromNew";
 import { createInvoice } from "@/lib/actions/invoices";
 
 export function NewInvoiceDialog({
   campaigns,
+  currency,
 }: {
   campaigns: { id: string; name: string; brandName: string }[];
+  currency: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOpenFromNew("invoice");
 
   return (
     <>
@@ -39,7 +41,7 @@ export function NewInvoiceDialog({
           </div>
           <div className="grid grid-cols-2 gap-3.5">
             <div className="mkt-field">
-              <label htmlFor="inv-amount">Amount (₹)</label>
+              <label htmlFor="inv-amount">Amount ({currency})</label>
               <input id="inv-amount" name="amount" type="number" min={0} className="mkt-input" required />
             </div>
             <div className="mkt-field">

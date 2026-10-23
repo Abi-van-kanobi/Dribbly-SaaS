@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import { NewNoteDialog } from "@/components/NewNoteDialog";
 
 export default async function NotesPage({
@@ -7,15 +7,16 @@ export default async function NotesPage({
   searchParams: Promise<{ campaignId?: string; brandId?: string }>;
 }) {
   const params = await searchParams;
+  const { db } = await requireWorkspace();
 
   const [notes, campaigns, brands] = await Promise.all([
-    prisma.note.findMany({
+    db.note.findMany({
       where: { campaignId: params.campaignId, brandId: params.brandId },
       include: { campaign: true, brand: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.campaign.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
-    prisma.brand.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.campaign.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    db.brand.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
   ]);
 
   return (

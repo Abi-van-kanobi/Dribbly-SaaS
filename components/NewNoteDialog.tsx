@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { Modal } from "@/components/Modal";
+import { useOpenFromNew } from "@/components/useOpenFromNew";
 import { createNote } from "@/lib/actions/notes";
 
 export function NewNoteDialog({
@@ -12,7 +12,7 @@ export function NewNoteDialog({
   campaigns: { id: string; name: string }[];
   brands: { id: string; name: string }[];
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOpenFromNew("note");
 
   return (
     <>

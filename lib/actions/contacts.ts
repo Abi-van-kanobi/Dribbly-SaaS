@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import type { ContactType } from "@prisma/client";
 
 export async function createContact(formData: FormData) {
+  const { db, workspace } = await requireWorkspace();
+
   const name = String(formData.get("name") || "").trim();
   const role = String(formData.get("role") || "").trim() || undefined;
   const org = String(formData.get("org") || "").trim() || undefined;
@@ -14,7 +16,7 @@ export async function createContact(formData: FormData) {
 
   if (!name) return;
 
-  await prisma.contact.create({ data: { name, role, org, email, phone, type } });
+  await db.contact.create({ data: { name, role, org, email, phone, type, workspaceId: workspace.id } });
 
   revalidatePath("/app/contacts");
 }

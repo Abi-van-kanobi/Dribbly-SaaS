@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 
 export async function createCreator(formData: FormData) {
+  const { db, workspace } = await requireWorkspace();
+
   const name = String(formData.get("name") || "").trim();
   const handle = String(formData.get("handle") || "").trim();
   const category = String(formData.get("category") || "").trim();
@@ -13,7 +15,7 @@ export async function createCreator(formData: FormData) {
 
   if (!name || !handle || !category) return;
 
-  await prisma.creator.create({
+  await db.creator.create({
     data: {
       name,
       handle: handle.startsWith("@") ? handle : `@${handle}`,
@@ -21,6 +23,7 @@ export async function createCreator(formData: FormData) {
       instagram: instagramRaw ? Number(instagramRaw) : undefined,
       youtube: youtubeRaw ? Number(youtubeRaw) : undefined,
       ratecardNote,
+      workspaceId: workspace.id,
     },
   });
 

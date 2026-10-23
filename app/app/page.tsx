@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   Broadcast,
   SealCheck,
-  CurrencyInr,
+  Coins,
   CheckSquare,
   SunHorizon,
   MagicWand,
@@ -12,37 +12,45 @@ import {
   Wallet,
   TrendUp,
 } from "@phosphor-icons/react/dist/ssr";
-import { prisma } from "@/lib/prisma";
-import { getManager } from "@/lib/session";
+import { requireWorkspace } from "@/lib/session";
 import { StatTile } from "@/components/StatTile";
 import { TaskCheckbox } from "@/components/TaskCheckbox";
 import { campaignStatus, deliverableStage, isDeliverableDone } from "@/lib/labels";
-import { formatINR, formatShortDate, formatTime, formatWeekday, formatDueLabel } from "@/lib/format";
+import { formatMoney, formatShortDate, formatTime, formatWeekday, formatDueLabel } from "@/lib/format";
 import { buildSparkline } from "@/lib/chart";
+import { AlignerSection } from "@/components/aligner/AlignerSection";
+import { TodayBar } from "@/components/today/TodayBar";
+import { PinButton } from "@/components/today/PinButton";
+import { pinnedKeys } from "@/lib/pin-service";
+import { dayInZone } from "@/lib/today";
 
 function monthKey(d: Date) {
   return `${d.getFullYear()}-${d.getMonth()}`;
 }
 
 export default async function DashboardPage() {
-  const manager = await getManager();
+  const { db, user, workspace } = await requireWorkspace();
+  const money = (n: number) => formatMoney(n, workspace.currency);
+  const pinCtx = { workspaceId: workspace.id, userId: user.id, timeZone: workspace.timezone, now: new Date() };
+  const today = dayInZone(pinCtx.now, workspace.timezone);
+  const pinned = await pinnedKeys(db, pinCtx);
 
   const [tasks, campaigns, approvalsWaiting, pendingInvoices, paidInvoices, upcomingDeliverables] =
     await Promise.all([
-      prisma.task.findMany({ orderBy: { order: "asc" }, include: { campaign: true, creator: true } }),
-      prisma.campaign.findMany({
+      db.task.findMany({ orderBy: { order: "asc" }, include: { campaign: true, creator: true } }),
+      db.campaign.findMany({
         where: { status: { in: ["LIVE", "IN_REVIEW", "WRAPPING"] } },
         include: { brand: true, creator: true, deliverables: { orderBy: { order: "asc" } } },
         orderBy: { createdAt: "asc" },
       }),
-      prisma.deliverable.count({ where: { stage: "IN_REVIEW" } }),
-      prisma.invoice.findMany({
+      db.deliverable.count({ where: { stage: "IN_REVIEW" } }),
+      db.invoice.findMany({
         where: { status: { in: ["PENDING", "OVERDUE"] } },
         include: { brand: true },
         orderBy: { dueDate: "asc" },
       }),
-      prisma.invoice.findMany({ where: { status: "PAID" }, select: { amount: true, dueDate: true } }),
-      prisma.deliverable.findMany({
+      db.invoice.findMany({ where: { status: "PAID" }, select: { amount: true, dueDate: true } }),
+      db.deliverable.findMany({
         where: { stage: { notIn: ["APPROVED", "LIVE"] } },
         orderBy: { dueDate: "asc" },
         take: 3,
@@ -50,9 +58,17 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  const doneCount = tasks.filter((t) => t.done).length;
+  // "Due today": tasks due today (done or not) plus anything older that is still open. The date is the
+  // workspace's own calendar day, not the server's.
+  const dueToday = tasks.filter((t) => {
+    if (!t.dueAt) return false;
+    const day = dayInZone(t.dueAt, workspace.timezone);
+    return day === today || (!t.done && day < today);
+  });
+  const doneCount = dueToday.filter((t) => t.done).length;
+  const openToday = dueToday.length - doneCount;
   const paymentsDue = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const distinctCreators = new Set(campaigns.map((c) => c.creatorId)).size;
+  const distinctCreators = new Set(campaigns.map((c) => c.creatorId).filter(Boolean)).size;
 
   const now = new Date();
   const buckets: { key: string; label: string; total: number }[] = [];
@@ -86,18 +102,18 @@ export default async function DashboardPage() {
               {now.toLocaleDateString("en-US", { weekday: "long", day: "numeric", month: "long" })}
             </div>
             <h1 className="text-[36px] mb-2" style={{ fontWeight: 800, letterSpacing: "-.02em" }}>
-              Good morning, {manager?.name.split(" ")[0] ?? "there"}
+              Good morning, {(user.name ?? user.email).split(" ")[0]}
             </h1>
             <p className="m-0 text-[15px]" style={{ color: "var(--aurora-text-muted)" }}>
               You have <b style={{ color: "var(--aurora-text)" }}>{approvalsWaiting} approvals</b> waiting and{" "}
-              <b style={{ color: "var(--aurora-text)" }}>{tasks.length} tasks</b> due today across{" "}
+              <b style={{ color: "var(--aurora-text)" }}>{openToday} {openToday === 1 ? "task" : "tasks"}</b> due today across{" "}
               {distinctCreators} creators.
             </p>
           </div>
           <div className="flex gap-3">
             <button className="mkt-btn mkt-btn-ghost" style={{ background: "#fff" }}>
               <MagicWand size={16} />
-              Ask Drribly
+              Ask Ettuno
             </button>
             <Link href="/app/campaigns" className="mkt-btn mkt-btn-primary">
               <Plus size={16} />
@@ -106,29 +122,38 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3.5 mt-7">
+        <div className="relative mt-6">
+          <TodayBar />
+        </div>
+
+        <div className="relative grid grid-cols-2 md:grid-cols-4 gap-3.5 mt-5">
           <StatTile icon={<Broadcast size={15} />} label="Active campaigns" value={campaigns.length} />
           <StatTile icon={<SealCheck size={15} />} label="Approvals waiting" value={approvalsWaiting} />
-          <StatTile icon={<CurrencyInr size={15} />} label="Payments due" value={formatINR(paymentsDue)} />
-          <StatTile icon={<CheckSquare size={15} />} label="Tasks today" value={tasks.length} />
+          <StatTile icon={<Coins size={15} />} label="Payments due" value={money(paymentsDue)} />
+          <StatTile icon={<CheckSquare size={15} />} label="Due today" value={openToday} />
         </div>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.55fr_1fr] gap-5">
+      <AlignerSection />
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1.55fr_1fr] gap-5">
         {/* LEFT COLUMN */}
         <div className="flex flex-col gap-5">
           <section className="mkt-card p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="text-[18px] flex items-center gap-2" style={{ fontWeight: 700 }}>
                 <SunHorizon size={17} style={{ color: "var(--aurora-accent)" }} />
-                Today
+                Due today
               </h3>
               <span className="text-[12.5px]" style={{ color: "var(--aurora-text-muted)" }}>
-                {doneCount} of {tasks.length} done
+                {doneCount} of {dueToday.length} done
               </span>
             </div>
+            <p className="text-[12.5px] mt-0 mb-4" style={{ color: "var(--aurora-text-muted)" }}>
+              Tasks dated today, plus older tasks still open. Pin one to put it in Important today.
+            </p>
             <div className="flex flex-col gap-2.5">
-              {tasks.map((task) => (
+              {dueToday.map((task) => (
                 <div
                   key={task.id}
                   className="flex items-center gap-3 px-3.5 py-3 rounded-xl"
@@ -153,6 +178,7 @@ export default async function DashboardPage() {
                       </div>
                     )}
                   </div>
+                  <PinButton kind="TASK" id={task.id} title={task.title} pinned={pinned.has(`TASK:${task.id}`)} />
                   {task.done ? (
                     <span className="text-[11.5px]" style={{ color: "var(--aurora-accent)" }}>
                       done
@@ -162,6 +188,11 @@ export default async function DashboardPage() {
                   )}
                 </div>
               ))}
+              {dueToday.length === 0 && (
+                <p className="text-sm m-0" style={{ color: "var(--aurora-text-muted)" }}>
+                  Nothing due today.
+                </p>
+              )}
             </div>
           </section>
 
@@ -194,7 +225,7 @@ export default async function DashboardPage() {
                       <span className={`mkt-tag ${status.tag}`}>{status.label}</span>
                     </div>
                     <div className="text-[12.5px] my-1.5" style={{ color: "var(--aurora-text-muted)" }}>
-                      {c.brand.name} · {c.creator.name} · {done} of {total}
+                      {c.brand.name} · {c.creator?.name ?? "No creator yet"} · {done} of {total} done
                     </div>
                     <div className="mkt-progress mb-2.5">
                       <i style={{ width: `${pct}%` }} />
@@ -224,7 +255,7 @@ export default async function DashboardPage() {
                   Earnings · last 6 months
                 </div>
                 <div className="text-[26px] font-bold mt-1" style={{ letterSpacing: "-.02em" }}>
-                  {formatINR(totalEarnings)}
+                  {money(totalEarnings)}
                 </div>
               </div>
               {growthPct !== 0 && (
@@ -277,12 +308,13 @@ export default async function DashboardPage() {
                         {d.title} — {d.campaign.brand.name}
                       </div>
                       <div className="text-[12px]" style={{ color: "var(--aurora-text-muted)" }}>
-                        {d.campaign.creator.name.split(" ")[0]}
+                        {d.campaign.creator?.name.split(" ")[0] ?? "No creator yet"}
                       </div>
                     </div>
                     <span className="text-[12.5px]" style={{ color: "var(--aurora-text-muted)" }}>
                       {formatWeekday(d.dueDate)}
                     </span>
+                    <PinButton kind="DELIVERABLE" id={d.id} title={d.title} pinned={pinned.has(`DELIVERABLE:${d.id}`)} />
                   </div>
                 );
               })}
@@ -300,7 +332,7 @@ export default async function DashboardPage() {
                 <Wallet size={17} style={{ color: "var(--aurora-accent)" }} />
                 Payments pending
               </h3>
-              <span className="mkt-tag mkt-tag-outline">{formatINR(paymentsDue)}</span>
+              <span className="mkt-tag mkt-tag-outline">{money(paymentsDue)}</span>
             </div>
             <div className="flex flex-col gap-2.5">
               {pendingInvoices.slice(0, 4).map((inv) => {
@@ -325,7 +357,7 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                     <div className="font-semibold" style={{ color: due.overdue ? "#c2410c" : "var(--aurora-text)" }}>
-                      {formatINR(inv.amount)}
+                      {money(inv.amount)}
                     </div>
                   </Link>
                 );

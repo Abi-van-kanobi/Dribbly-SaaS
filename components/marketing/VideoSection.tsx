@@ -16,7 +16,7 @@ export function VideoSection({ videoUrl }: { videoUrl?: string }) {
   if (playing && videoUrl) {
     return (
       <div className="relative w-full rounded-[24px] overflow-hidden" style={{ aspectRatio: "16/9", boxShadow: "var(--aurora-shadow-lg)" }}>
-        <iframe src={videoUrl} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen" loading="lazy" title="Drrible product walkthrough" />
+        <iframe src={videoUrl} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen" loading="lazy" title="Ettuno product walkthrough" />
       </div>
     );
   }

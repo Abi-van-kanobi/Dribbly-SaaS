@@ -1,4 +1,4 @@
-# Drribly — Product Plan & Technology Recommendation
+# Ettuno — Product Plan & Technology Recommendation
 
 This document answers the scope-of-work questions from the original brief: MVP prioritization,
 technical architecture, development timeline, and estimated cost. It's written as reference
@@ -7,7 +7,7 @@ documentation for you, not as a formal quote.
 ## What's built in this pass
 
 A working **talent-manager workspace** — the manager-first MVP scope you defined, matching the
-Nocturne visual design pulled from the Drribly Claude Design project. Real data, real CRUD, no
+Nocturne visual design pulled from the Ettuno Claude Design project. Real data, real CRUD, no
 mock JSON:
 
 - **Dashboard** — today's tasks, active campaigns, earnings trend, upcoming deadlines, payments pending
@@ -97,7 +97,7 @@ of magnitude when talking to vendors, not to lock in a number now.
 
 ## Worth flagging early, not late
 
-- **Payment compliance** — routing brand payments through Drribly and splitting out a creator payout
+- **Payment compliance** — routing brand payments through Ettuno and splitting out a creator payout
   touches RBI payment-aggregator rules in India (and PCI scope if card details ever pass through
   your servers instead of the rail's own hosted checkout). Loop in someone who's done this before —
   it changes the payments architecture, not just the UI.

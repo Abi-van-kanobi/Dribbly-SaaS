@@ -1,18 +1,24 @@
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import { invoiceStatus, payRail } from "@/lib/labels";
-import { formatINR, formatShortDate } from "@/lib/format";
+import { formatMoney, formatShortDate } from "@/lib/format";
 import { StatTile } from "@/components/StatTile";
+import { CreatorChip } from "@/components/CreatorChip";
 import { NewInvoiceDialog } from "@/components/NewInvoiceDialog";
 import { MarkPaidButton } from "@/components/MarkPaidButton";
-import { CurrencyInr, Clock, WarningCircle, Wallet, Plus } from "@phosphor-icons/react/dist/ssr";
+import { PinButton } from "@/components/today/PinButton";
+import { pinnedKeys } from "@/lib/pin-service";
+import { Coins, Clock, WarningCircle, Wallet, Plus } from "@phosphor-icons/react/dist/ssr";
 
 export default async function PaymentsPage() {
+  const { db, workspace, user } = await requireWorkspace();
+  const money = (n: number) => formatMoney(n, workspace.currency);
+  const pinned = await pinnedKeys(db, { workspaceId: workspace.id, userId: user.id, timeZone: workspace.timezone, now: new Date() });
   const [invoices, campaigns] = await Promise.all([
-    prisma.invoice.findMany({
+    db.invoice.findMany({
       include: { campaign: true, brand: true, creator: true },
       orderBy: { dueDate: "asc" },
     }),
-    prisma.campaign.findMany({ include: { brand: true }, orderBy: { name: "asc" } }),
+    db.campaign.findMany({ include: { brand: true }, orderBy: { name: "asc" } }),
   ]);
 
   const now = new Date();
@@ -31,7 +37,7 @@ export default async function PaymentsPage() {
         <h1 className="text-[26px]" style={{ fontWeight: 800 }}>
           Payments
         </h1>
-        <NewInvoiceDialog campaigns={campaigns.map((c) => ({ id: c.id, name: c.name, brandName: c.brand.name }))} />
+        <NewInvoiceDialog campaigns={campaigns.map((c) => ({ id: c.id, name: c.name, brandName: c.brand.name }))} currency={workspace.currency} />
       </div>
 
       <h4 className="text-[12.5px] uppercase mb-2.5 font-semibold" style={{ letterSpacing: ".06em", color: "var(--aurora-text-muted)" }}>
@@ -50,13 +56,13 @@ export default async function PaymentsPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <StatTile icon={<CurrencyInr size={15} />} label="Received this month" value={formatINR(receivedThisMonth)} valueColor="#15803d" />
-        <StatTile icon={<Clock size={15} />} label="Pending" value={formatINR(pending)} valueColor="#c2410c" />
-        <StatTile icon={<WarningCircle size={15} />} label="Overdue" value={formatINR(overdue)} valueColor="#dc2626" />
-        <StatTile icon={<Wallet size={15} />} label="Total invoiced" value={formatINR(totalInvoiced)} />
+        <StatTile icon={<Coins size={15} />} label="Received this month" value={money(receivedThisMonth)} valueColor="#15803d" />
+        <StatTile icon={<Clock size={15} />} label="Pending" value={money(pending)} valueColor="#c2410c" />
+        <StatTile icon={<WarningCircle size={15} />} label="Overdue" value={money(overdue)} valueColor="#dc2626" />
+        <StatTile icon={<Wallet size={15} />} label="Total invoiced" value={money(totalInvoiced)} />
       </div>
 
-      <div className="mkt-card p-0 overflow-hidden">
+      <div className="mkt-card p-0 overflow-x-auto">
         <table className="mkt-table">
           <thead>
             <tr>
@@ -64,7 +70,7 @@ export default async function PaymentsPage() {
               <th>Campaign</th>
               <th>Brand</th>
               <th>Creator</th>
-              <th>Amount</th>
+              <th style={{ textAlign: "right" }}>Amount</th>
               <th>Rail</th>
               <th>Status</th>
               <th>Due</th>
@@ -77,14 +83,23 @@ export default async function PaymentsPage() {
                 <td style={{ fontWeight: 600 }}>#{inv.number}</td>
                 <td>{inv.campaign.name}</td>
                 <td>{inv.brand.name}</td>
-                <td>{inv.creator.name}</td>
-                <td>{formatINR(inv.amount)}</td>
+                <td>
+                  <CreatorChip creator={inv.creator} />
+                </td>
+                <td style={{ textAlign: "right" }}>{money(inv.amount)}</td>
                 <td>{payRail[inv.rail]}</td>
                 <td>
                   <span className={`mkt-tag ${invoiceStatus[inv.status].tag}`}>{invoiceStatus[inv.status].label}</span>
                 </td>
                 <td>{formatShortDate(inv.dueDate)}</td>
-                <td>{inv.status !== "PAID" && <MarkPaidButton invoiceId={inv.id} />}</td>
+                <td>
+                  {inv.status !== "PAID" && (
+                    <div className="flex items-center gap-1.5">
+                      <PinButton kind="INVOICE" id={inv.id} title={`Invoice #${inv.number}`} pinned={pinned.has(`INVOICE:${inv.id}`)} />
+                      <MarkPaidButton invoiceId={inv.id} />
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
             {invoices.length === 0 && (

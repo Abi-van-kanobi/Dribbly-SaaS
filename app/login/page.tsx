@@ -1,11 +1,22 @@
-"use client";
+import Link from "next/link";
+import { demoLoginAction } from "./actions";
+import { isDemoEnabled } from "@/lib/demo-account";
+import { isGoogleConfigured } from "@/lib/google";
 
-import { useActionState } from "react";
-import { loginAction } from "./actions";
-import { DEMO_EMAIL, DEMO_PASSWORD } from "@/lib/demo-account";
+const ERRORS: Record<string, string> = {
+  google: "Google sign-in did not finish. Please try again.",
+  "google-not-configured": "Google sign-in is not set up on this server yet.",
+  "email-unverified": "Google says that email address is not verified. Verify it with Google, then try again.",
+  "email-in-use": "That email already belongs to another account.",
+  "no-workspace": "We could not find a workspace for that account. Contact support.",
+  demo: "The demo workspace is not available right now.",
+};
 
-export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(loginAction, { error: false });
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error } = await searchParams;
+  const googleReady = isGoogleConfigured();
+  const demoReady = isDemoEnabled();
+  const devLogin = process.env.NODE_ENV !== "production" && process.env.ALLOW_DEV_LOGIN === "true";
 
   return (
     <div className="mkt min-h-screen grid grid-cols-1 md:grid-cols-2">
@@ -23,7 +34,7 @@ export default function LoginPage() {
             <span className="w-[26px] h-[26px] rounded-lg grid place-items-center text-white text-[13px] font-bold" style={{ background: "var(--aurora-gradient-primary)" }}>
               D
             </span>
-            Drrible
+            Ettuno
           </div>
           <h1 className="text-[36px] mb-5" style={{ fontWeight: 800, letterSpacing: "-.02em", lineHeight: 1.15 }}>
             One workspace. <span className="mkt-gradient-text">Every creator you manage.</span>
@@ -34,9 +45,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* RIGHT — form */}
+      {/* RIGHT — sign in */}
       <div className="flex items-center justify-center px-6 py-16">
-        {/* Nested-div trick for a thin gradient top edge without fighting border-image */}
         <div
           className="w-full max-w-[380px] rounded-[20px] overflow-hidden"
           style={{ background: "var(--aurora-gradient-primary)", paddingTop: 4, boxShadow: "var(--aurora-shadow-md)" }}
@@ -46,54 +56,60 @@ export default function LoginPage() {
               <span className="w-[24px] h-[24px] rounded-lg grid place-items-center text-white text-[12px] font-bold" style={{ background: "var(--aurora-gradient-primary)" }}>
                 D
               </span>
-              Drrible
+              Ettuno
             </div>
 
             <div>
               <h2 className="text-[22px] mb-1" style={{ fontWeight: 700 }}>
-                Welcome back
+                Welcome
               </h2>
               <p className="text-[14px] m-0" style={{ color: "var(--aurora-text-muted)" }}>
-                Sign in to your talent-manager workspace.
+                Sign in with Google. No password to remember.
               </p>
             </div>
 
-            <form action={formAction} className="flex flex-col gap-4">
-              <div>
-                <label htmlFor="email" className="block text-[12.5px] mb-1.5 font-medium" style={{ color: "var(--aurora-text)" }}>
-                  Email
-                </label>
-                <input id="email" name="email" type="email" className="mkt-input" defaultValue={DEMO_EMAIL} autoComplete="email" required />
-              </div>
-              <div>
-                <label htmlFor="password" className="block text-[12.5px] mb-1.5 font-medium" style={{ color: "var(--aurora-text)" }}>
-                  Password
-                </label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  className="mkt-input"
-                  defaultValue={DEMO_PASSWORD}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
+            {error && ERRORS[error] && (
+              <p role="alert" className="text-[13.5px] m-0" style={{ color: "#dc2626" }}>
+                {ERRORS[error]}
+              </p>
+            )}
 
-              {state.error && (
-                <p className="text-[13.5px] m-0" style={{ color: "#dc2626" }}>
-                  Incorrect email or password.
-                </p>
+            <div className="flex flex-col gap-3">
+              {googleReady ? (
+                <a href="/api/auth/google" className="mkt-btn mkt-btn-primary w-full no-underline">
+                  Continue with Google
+                </a>
+              ) : (
+                <button type="button" disabled className="mkt-btn mkt-btn-primary w-full" title="Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to enable">
+                  Continue with Google
+                </button>
               )}
 
-              <button type="submit" disabled={pending} className="mkt-btn mkt-btn-primary w-full" style={{ marginTop: 4 }}>
-                {pending ? "Signing in…" : "Sign in"}
-              </button>
-            </form>
+              {demoReady && (
+                <form action={demoLoginAction}>
+                  <button type="submit" className="mkt-btn mkt-btn-ghost w-full">
+                    Explore the demo workspace
+                  </button>
+                </form>
+              )}
 
-            <p className="text-[12px] m-0" style={{ color: "#a8a3b8" }}>
-              Demo account — the fields above are pre-filled. This is a local prototype; there is no
-              real signup yet.
+              {devLogin && (
+                <a href="/api/auth/dev" className="mkt-link text-[13px] text-center">
+                  Dev only: sign in as a fake Google user
+                </a>
+              )}
+            </div>
+
+            <p className="text-[12px] m-0" style={{ color: "#a8a3b8", lineHeight: 1.5 }}>
+              New here? You will read and accept our{" "}
+              <Link href="/terms" className="mkt-link">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="mkt-link">
+                Privacy Policy
+              </Link>{" "}
+              before your account is created.
             </p>
           </div>
         </div>

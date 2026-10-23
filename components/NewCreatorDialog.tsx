@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Plus } from "@phosphor-icons/react";
 import { Modal } from "@/components/Modal";
+import { useOpenFromNew } from "@/components/useOpenFromNew";
 import { createCreator } from "@/lib/actions/creators";
 
 export function NewCreatorDialog() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useOpenFromNew("creator");
 
   return (
     <>
@@ -48,7 +48,7 @@ export function NewCreatorDialog() {
           </div>
           <div className="mkt-field">
             <label htmlFor="cr-rate">Rate card note</label>
-            <textarea id="cr-rate" name="ratecardNote" className="mkt-input" placeholder="Reel: ₹Xk · Story: ₹Xk" />
+            <textarea id="cr-rate" name="ratecardNote" className="mkt-input" placeholder="Reel: 800 · Story set: 350" />
           </div>
           <div className="flex justify-end gap-2 mt-1">
             <button type="button" className="mkt-btn mkt-btn-ghost" onClick={() => setOpen(false)}>

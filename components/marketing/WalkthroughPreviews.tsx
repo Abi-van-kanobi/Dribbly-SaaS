@@ -30,7 +30,7 @@ export function DashboardPreview() {
         {[
           { label: "Active", value: "12" },
           { label: "Approvals", value: "3" },
-          { label: "Due", value: "₹4.2L" },
+          { label: "Due", value: "$5.9K" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl p-3" style={{ background: "var(--aurora-bg-tint)" }}>
             <div className="text-[10.5px]" style={{ color: "var(--aurora-text-muted)" }}>
@@ -43,12 +43,12 @@ export function DashboardPreview() {
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl" style={{ border: "1px solid var(--aurora-border)" }}>
           <span className="w-3.5 h-3.5 rounded-[4px] flex-none" style={{ border: "1.5px solid #cfc9e0" }} />
-          <span className="text-[12.5px]">Approve Reel draft — Aanya × Nykaa</span>
+          <span className="text-[12.5px]">Approve Reel draft — Elin × Lumen Beauty</span>
         </div>
         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl" style={{ background: "var(--aurora-bg-tint)" }}>
           <span className="w-3.5 h-3.5 rounded-[4px] flex-none grid place-items-center" style={{ background: "var(--aurora-accent)" }} />
           <span className="text-[12.5px]" style={{ color: "var(--aurora-text-muted)", textDecoration: "line-through" }}>
-            Confirm shoot slot — Mamaearth
+            Confirm shoot slot — Greenleaf Naturals
           </span>
         </div>
       </div>
@@ -67,21 +67,21 @@ export function CreatorProfilePreview() {
           AS
         </div>
         <div>
-          <div className="font-bold text-[15px]">Aanya Sharma</div>
+          <div className="font-bold text-[15px]">Elin Lindqvist</div>
           <div className="text-[12px]" style={{ color: "var(--aurora-text-muted)" }}>
-            @aanya · IG 480k · YT 120k
+            @elinlindqvist · IG 480k · YT 120k
           </div>
         </div>
       </div>
       <div className="flex gap-1.5 mb-4 flex-wrap">
-        {["Beauty", "2 live", "₹1.8L pending"].map((t) => (
+        {["Beauty", "2 live", "$2.7K pending"].map((t) => (
           <span key={t} className="mkt-tag" style={{ background: "var(--aurora-bg-tint)", color: "var(--aurora-text)" }}>
             {t}
           </span>
         ))}
       </div>
       <div className="flex items-center justify-between px-3 py-2.5 rounded-xl" style={{ border: "1px solid var(--aurora-border)" }}>
-        <span className="text-[12.5px]">Summer Glow · Nykaa</span>
+        <span className="text-[12.5px]">Summer Glow · Lumen Beauty</span>
         <span className="mkt-tag" style={{ background: "#ede9fe", color: "#7c3aed" }}>
           Live
         </span>
@@ -115,9 +115,9 @@ export function CampaignTimelinePreview() {
 
 export function PaymentTrackingPreview() {
   const rows = [
-    { label: "Nykaa · Inv #204", meta: "overdue 3d", amount: "₹1.8L", bg: "#fff7ed", color: "#c2410c" },
-    { label: "Boat · Inv #211", meta: "due in 5d", amount: "₹95k", bg: "#f8f7fc", color: "var(--aurora-text-muted)" },
-    { label: "Mamaearth · Inv #198", meta: "paid", amount: "₹2.2L", bg: "#ecfdf5", color: "#15803d" },
+    { label: "Lumen Beauty · Inv #204", meta: "overdue 3d", amount: "$2.7K", bg: "#fff7ed", color: "#c2410c" },
+    { label: "Northwave Audio · Inv #211", meta: "due in 5d", amount: "$1.4K", bg: "#f8f7fc", color: "var(--aurora-text-muted)" },
+    { label: "Greenleaf Naturals · Inv #198", meta: "paid", amount: "$3.3K", bg: "#ecfdf5", color: "#15803d" },
   ];
   return (
     <ClipFrame>
@@ -146,7 +146,7 @@ export function NotesInContextPreview() {
           Brief
         </span>
       </div>
-      <div className="font-bold text-[14px] mb-1.5">Nykaa — Summer Glow brand brief</div>
+      <div className="font-bold text-[14px] mb-1.5">Lumen Beauty — Summer Glow brand brief</div>
       <p className="text-[12.5px] m-0 mb-3" style={{ color: "var(--aurora-text-muted)", lineHeight: 1.6 }}>
         Warm-toned summer look, no pastel backgrounds. Product must appear in first 3 seconds…
       </p>
@@ -154,7 +154,7 @@ export function NotesInContextPreview() {
         <span className="text-[11.5px]" style={{ color: "var(--aurora-text-muted)" }}>
           Linked to
         </span>
-        <span className="text-[11.5px] font-medium">Summer Glow · Nykaa</span>
+        <span className="text-[11.5px] font-medium">Summer Glow · Lumen Beauty</span>
       </div>
     </ClipFrame>
   );

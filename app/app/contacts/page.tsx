@@ -1,8 +1,9 @@
-import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/session";
 import { NewContactDialog } from "@/components/NewContactDialog";
 
 export default async function ContactsPage() {
-  const contacts = await prisma.contact.findMany({
+  const { db } = await requireWorkspace();
+  const contacts = await db.contact.findMany({
     orderBy: { name: "asc" },
     include: { brand: true, creator: true },
   });
